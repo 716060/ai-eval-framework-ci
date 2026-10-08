@@ -1,6 +1,7 @@
 pipeline {
-    agent any
-
+    agent {
+        docker { image 'python:3.10-slim' } // 直接用一个带 Python 的镜像
+    }
     stages {
         stage('Checkout') {
             steps {
