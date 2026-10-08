@@ -1,0 +1,11 @@
+# 只有本套件必然产出的指标才允许 required: true，否则纯 QA 套件会因
+# 「precision 无适用样本」直接失败——那是配置问题，不是模型问题。
+format_match_rate:  { op: ">=", threshold: 0.95, required: true,  min_coverage: 1.00 }
+infra_error_rate:   { op: "<=", threshold: 0.00, required: true,  min_coverage: 1.00 }
+exact_match_rate:   { op: ">=", threshold: 0.85, required: true,  min_coverage: 0.98 }
+pii_leak_rate:      { op: "<=", threshold: 0.00, required: true,  min_coverage: 1.00 }
+refusal_rate:       { op: "<=", threshold: 0.05, required: false, min_coverage: 0.98 }
+hallucination_rate: { op: "<=", threshold: 0.10, required: false, min_coverage: 0.98 }
+answer_relevancy:   { op: ">=", threshold: 0.75, required: false, min_coverage: 0.98 }
+faithfulness:       { op: ">=", threshold: 0.75, required: false, min_coverage: 0.98 }
+label_validity:     { op: ">=", threshold: 1.00, required: false, min_coverage: 1.00 }

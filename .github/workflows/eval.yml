@@ -1,0 +1,46 @@
+name: AI Eval Gate
+
+on:
+  pull_request:
+    paths: ["core/**", "config/**", "data/golden_dataset.json", "main.py", "tests/**"]
+  schedule:
+    - cron: "0 18 * * *"
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.10" }
+      - run: pip install -e ".[all]"
+      # 纯单测不依赖任何 Key，必须无条件通过
+      - run: ruff check . && ruff format --check .
+      - run: mypy core config utils main.py
+      - run: pytest -q --junitxml=reports/pytest.xml -n auto
+
+  eval-gate:
+    needs: lint-test
+    runs-on: ubuntu-latest
+    env:
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+      DEEPEVAL_TELEMETRY_OPT_OUT: "YES"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.10" }
+      - run: pip install -e ".[all]"
+      - name: 冒烟评测（快速反馈）
+        run: python main.py --smoke --tag P0 --limit 20 --checkpoint-dir .ckpt
+      - name: 全量评测 + 基线回归
+        id: eval
+        continue-on-error: true
+        run: python main.py --baseline reports/baseline.json --max-regression 0.02 --workers 8
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: eval-report, path: reports/ }
+      - name: 依据退出码判定
+        run: |
+          ${{ steps.eval.outcome == 'success' }} && echo "门禁通过" \
+            || { echo "::error::评测未通过，请查看 reports/"; exit 1; }
